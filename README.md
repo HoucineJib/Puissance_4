@@ -46,9 +46,9 @@ Lancez le jeu en utilisant Python :
 
 Bash
 
-python votre_fichier_de_jeu.py 
-# Remplacez "votre_fichier_de_jeu.py" par le nom réel de votre fichier.
-⚠️ Note pour VS Code : Si vous lancez le fichier en utilisant le bouton "Run" ou le triangle vert, il se peut que le répertoire de travail actuel ne soit pas le bon, et que les images ne s'affichent pas (seules les cases colorées de secours apparaitront). L'exécution via la console (Terminal) comme décrit ci-dessus contourne ce problème et assure le bon chargement des ressources.
+
+# ⚠️ Note pour VS Code : 
+Si vous lancez le fichier en utilisant le bouton "Run" ou le triangle vert, il se peut que le répertoire de travail actuel ne soit pas le bon, et que les images ne s'affichent pas (seules les cases colorées de secours apparaitront). L'exécution via la console (Terminal) comme décrit ci-dessus contourne ce problème et assure le bon chargement des ressources.
 
 🖱️ Jeu et Fonctionnalités
 Menu Démarrage : Cliquez sur JOUER pour accéder à la sélection des pays.
