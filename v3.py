@@ -60,6 +60,7 @@ PAYS_DISPONIBLES = [
     Pays("Brésil", "Drapeaux/drapeau_brésil.png", (0, 0, 0)),
     Pays("Espagne", "Drapeaux/drapeau_espagne.png", (0, 140, 69)),
     Pays("France", "Drapeaux/drapeau_france.png", (170, 21, 27)),
+    Pays("Liban", "Drapeaux/drapeau_liban.png", (237, 28, 36)),
     Pays("Libye", "Drapeaux/drapeau_libye.png", (0, 156, 59)),
     Pays("Malaisie", "Drapeaux/drapeau_malaisie.png", (116, 172, 223)),
     Pays("Mali", "Drapeaux/drapeau_mali.png", (188, 0, 45)),
