@@ -606,3 +606,5 @@ if __name__ == '__main__':
         print(f"Une erreur est survenue : {e}")
         pygame.quit()
         sys.exit()
+
+        #test
