@@ -14,7 +14,7 @@ RAYON_PION = int(TAILLE_CASE / 2 - 8)
 
 MARGE_X = 50
 MARGE_Y = 50
-ESPACE_ENTETE = 100
+ESPACE_ENTETE = 150 
 
 LARGEUR_GRILLE = COLONNES * TAILLE_CASE
 HAUTEUR_GRILLE = LIGNES * TAILLE_CASE
@@ -31,10 +31,12 @@ COULEUR_BOUTON_HOVER = (46, 204, 113)
 COULEUR_IA_FACILE = (46, 204, 113)
 COULEUR_IA_MOYEN = (243, 156, 18)
 COULEUR_IA_DIFFICILE = (231, 76, 60)
+ROUGE_ALERT = (231, 76, 60)
 
 POLICE_TAILLE = 60
 FPS = 60
 VITESSE_CHUTE = 25
+TEMPS_PAR_TOUR = 15
 
 class Pays:
     def __init__(self, nom, fichier_drapeau, couleur_fond):
@@ -60,7 +62,6 @@ PAYS_DISPONIBLES = [
     Pays("Brésil", "Drapeaux/drapeau_brésil.png", (0, 0, 0)),
     Pays("Espagne", "Drapeaux/drapeau_espagne.png", (0, 140, 69)),
     Pays("France", "Drapeaux/drapeau_france.png", (170, 21, 27)),
-    Pays("Liban", "Drapeaux/drapeau_liban.png", (237, 28, 36)),
     Pays("Libye", "Drapeaux/drapeau_libye.png", (0, 156, 59)),
     Pays("Malaisie", "Drapeaux/drapeau_malaisie.png", (116, 172, 223)),
     Pays("Mali", "Drapeaux/drapeau_mali.png", (188, 0, 45)),
@@ -238,6 +239,9 @@ class JoueurOrdinateur(Joueur):
             for r in range(LIGNES - 3):
                 if all(grille[r+i][c+i] == piece for i in range(4)): return True
         return False
+    
+    def reinitialiser(self):
+        self.grille = self._creer_grille()
 
 class Plateau:
     def __init__(self, lignes, colonnes):
@@ -286,18 +290,20 @@ class Jeu:
         self.joueurs = []
 
         self.ecran = pygame.display.set_mode(TAILLE_FENETRE)
-        pygame.display.set_caption("Puissance 4 - Expert")
+        pygame.display.set_caption("Puissance 4 - Ultimate")
 
         self.clock = pygame.time.Clock()
         self.police = pygame.font.SysFont("Arial", POLICE_TAILLE, bold=True)
         self.police_bouton = pygame.font.SysFont("Arial", 40, bold=True)
         self.police_petite = pygame.font.SysFont("Arial", 30, bold=True)
+        self.police_chrono = pygame.font.SysFont("Consolas", 40, bold=True)
 
         self.etat_jeu = "MENU"
         self.mode_ia = False 
         self.niveau_ia = 1
         self.jeu_termine = False
         self.tour_index = 0
+        self.scores = [0, 0]
 
         self.anim_en_cours = False
         self.anim_col = 0
@@ -306,6 +312,8 @@ class Jeu:
         self.anim_y_cible = 0
         
         self.timer_ia = 0 
+        self.compteur_frame = 0
+        self.temps_restant = TEMPS_PAR_TOUR
 
         self.surface_grille_bleue = self._creer_surface_grille()
 
@@ -424,10 +432,16 @@ class Jeu:
             if btn_demarrer.collidepoint(pos):
                 self.demarrer_jeu()
         
-        elif self.etat_jeu == "JEU" and self.jeu_termine:
-            btn_rejouer = pygame.Rect(LARGEUR_ECRAN//2 - 100, HAUTEUR_ECRAN//2 + 80, 200, 60)
-            if btn_rejouer.collidepoint(pos):
-                self.reinitialiser_jeu()
+        elif self.etat_jeu == "JEU":
+            btn_menu = pygame.Rect(LARGEUR_ECRAN - 140, 20, 120, 50)
+            if btn_menu.collidepoint(pos):
+                self.etat_jeu = "MENU"
+                self.scores = [0, 0] 
+
+            if self.jeu_termine:
+                btn_rejouer = pygame.Rect(LARGEUR_ECRAN//2 - 100, HAUTEUR_ECRAN//2 + 80, 200, 60)
+                if btn_rejouer.collidepoint(pos):
+                    self.reinitialiser_jeu()
 
     def demarrer_jeu(self):
         p1 = JoueurHumain(1, PAYS_DISPONIBLES[self.pays_selectionnes[0]])
@@ -444,12 +458,14 @@ class Jeu:
         self.tour_index = 0
         self.jeu_termine = False
         self.anim_en_cours = False
+        self.temps_restant = TEMPS_PAR_TOUR
     
     def reinitialiser_jeu(self):
         self.plateau.reinitialiser()
         self.jeu_termine = False
         self.tour_index = 0
         self.anim_en_cours = False
+        self.temps_restant = TEMPS_PAR_TOUR
 
     def debuter_coup(self, col):
         if not self.plateau.est_colonne_valide(col) or self.anim_en_cours:
@@ -478,13 +494,30 @@ class Jeu:
 
             if self.plateau.verifier_victoire(self.tour_index + 1):
                 self.jeu_termine = True
+                self.scores[self.tour_index] += 1
             else:
                 self.tour_index = (self.tour_index + 1) % 2
                 self.timer_ia = 0
+                self.temps_restant = TEMPS_PAR_TOUR
 
     def dessiner_plateau_et_animation(self, mouse_x=None):
         self.ecran.fill(COULEUR_FOND)
         debut_grille_y = MARGE_Y + ESPACE_ENTETE
+
+        txt_scores = self.police_bouton.render(f"SCORE: {self.scores[0]} - {self.scores[1]}", True, NOIR)
+        self.ecran.blit(txt_scores, (20, 20))
+
+        if not self.mode_ia and not self.jeu_termine:
+            couleur_chrono = NOIR if self.temps_restant > 5 else ROUGE_ALERT
+            txt_chrono = self.police_chrono.render(f"00:{self.temps_restant:02d}", True, couleur_chrono)
+            rect_chrono = txt_chrono.get_rect(center=(LARGEUR_ECRAN // 2, 50))
+            self.ecran.blit(txt_chrono, rect_chrono)
+
+        btn_menu = pygame.Rect(LARGEUR_ECRAN - 140, 20, 120, 50)
+        pygame.draw.rect(self.ecran, (127, 140, 141), btn_menu, border_radius=8)
+        pygame.draw.rect(self.ecran, NOIR, btn_menu, 2, border_radius=8)
+        txt_menu = self.police_petite.render("MENU", True, BLANC)
+        self.ecran.blit(txt_menu, txt_menu.get_rect(center=btn_menu.center))
 
         for c in range(COLONNES):
             for r in range(LIGNES):
@@ -525,13 +558,13 @@ class Jeu:
         if self.jeu_termine:
             message = self.joueurs[self.tour_index].obtenir_message_victoire()
             texte_victoire = self.police.render(message, True, NOIR)
-            ombre_rect = texte_victoire.get_rect(center=(LARGEUR_ECRAN//2, 50))
-            pygame.draw.rect(self.ecran, (255, 255, 255, 180), 
-                           (ombre_rect.x-10, ombre_rect.y-10, 
-                            ombre_rect.width+20, ombre_rect.height+20))
+            ombre_rect = texte_victoire.get_rect(center=(LARGEUR_ECRAN//2, HAUTEUR_ECRAN//2))
+            pygame.draw.rect(self.ecran, (255, 255, 255, 220), 
+                           (ombre_rect.x-20, ombre_rect.y-20, 
+                            ombre_rect.width+40, ombre_rect.height+40))
             pygame.draw.rect(self.ecran, NOIR, 
-                           (ombre_rect.x-10, ombre_rect.y-10, 
-                            ombre_rect.width+20, ombre_rect.height+20), 2)
+                           (ombre_rect.x-20, ombre_rect.y-20, 
+                            ombre_rect.width+40, ombre_rect.height+40), 2)
             self.ecran.blit(texte_victoire, ombre_rect)
 
             btn_rejouer = pygame.Rect(LARGEUR_ECRAN//2 - 100, HAUTEUR_ECRAN//2 + 80, 200, 60)
@@ -552,6 +585,19 @@ class Jeu:
                         col_ia = joueur_actuel.choisir_colonne(self.plateau)
                         self.debuter_coup(col_ia)
                         self.timer_ia = 0
+                else:
+                    if not self.mode_ia:
+                        self.compteur_frame += 1
+                        if self.compteur_frame >= FPS:
+                            self.temps_restant -= 1
+                            self.compteur_frame = 0
+                            if self.temps_restant < 0:
+                                valides = []
+                                for c in range(COLONNES):
+                                    if self.plateau.est_colonne_valide(c):
+                                        valides.append(c)
+                                if valides:
+                                    self.debuter_coup(random.choice(valides))
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -576,9 +622,14 @@ class Jeu:
                     elif self.etat_jeu != "JEU":
                         self.gerer_clic_souris(event.pos)
                     else:
-                        if self.jeu_termine:
+                         if btn_menu := pygame.Rect(LARGEUR_ECRAN - 140, 20, 120, 50):
+                             if btn_menu.collidepoint(event.pos):
+                                 self.gerer_clic_souris(event.pos)
+                                 continue
+                                 
+                         if self.jeu_termine:
                              self.gerer_clic_souris(event.pos)
-                        elif not self.anim_en_cours:
+                         elif not self.anim_en_cours:
                             joueur_actuel = self.joueurs[self.tour_index]
                             if not joueur_actuel.est_ia():
                                 pos_relative_x = event.pos[0] - MARGE_X
@@ -606,5 +657,3 @@ if __name__ == '__main__':
         print(f"Une erreur est survenue : {e}")
         pygame.quit()
         sys.exit()
-
-        #test
