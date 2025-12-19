@@ -3,6 +3,7 @@ import sys
 import math
 import random
 import copy
+import os
 
 # =========================
 # PARAMÈTRES GLOBAUX
@@ -60,6 +61,7 @@ VIOLET_CREDITS = (155, 89, 182)
 # =========================
 # CLASSES PAYS / JOUEURS
 # =========================
+# POO: Joueur (base) et JoueurHumain/JoueurOrdinateur (héritage + polymorphisme via est_ia/choisir_colonne)
 class Pays:
     def __init__(self, nom, fichier_drapeau, couleur_fond):
         self.nom = nom
@@ -345,6 +347,8 @@ class Jeu:
         self.police_petite = pygame.font.SysFont("Arial", 28, bold=True)
         self.police_chrono = pygame.font.SysFont("Consolas", 40, bold=True)
         self.police_regles = pygame.font.SysFont("Arial", 24)
+        # Chargement du logo CyTech (affiché uniquement dans le menu et la page de paramètres)
+        self._charger_logo_cytech()
 
         self.mode_sombre = False
         self.theme = THEME_CLAIR
@@ -446,6 +450,49 @@ class Jeu:
         self.ecran.blit(surf, surf.get_rect(center=rect.center))
 
     # =========================
+    # LOGO CYTECH (affichage contextuel)
+    # =========================
+    def _charger_logo_cytech(self):
+        """Charge, met à l'échelle et arrondit les angles du logo CyTech."""
+        self.logo_cytech = None
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            logo_path = os.path.join(base_dir, "CyTech.png")
+            img = pygame.image.load(logo_path).convert_alpha()
+            
+            # Mise à l'échelle raisonnable
+            max_w = min(160, int(self.screen_w * 0.15))
+            w, h = img.get_width(), img.get_height()
+            if w > max_w:
+                ratio = max_w / max(1, w)
+                img = pygame.transform.smoothscale(img, (max_w, max(1, int(h * ratio))))
+            
+            # --- DÉBUT DE L'AJOUT POUR LES BORDURES RONDES ---
+            rayon_arrondi = 15  # Tu peux changer cette valeur (ex: 15, 30)
+
+            # 1. Créer une surface transparente de la même taille que l'image
+            masque = pygame.Surface(img.get_size(), pygame.SRCALPHA)
+            
+            # 2. Dessiner un rectangle arrondi blanc (opaque) sur ce masque
+            pygame.draw.rect(masque, (255, 255, 255), masque.get_rect(), border_radius=rayon_arrondi)
+            
+            # Là où le masque est transparent (les coins), l'image deviendra transparente.
+            img.blit(masque, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
+            
+            self.logo_cytech = img
+        except Exception:
+            self.logo_cytech = None
+
+    def _afficher_logo_cytech(self):
+        """Affiche le logo en haut à droite avec une faible marge."""
+        if not self.logo_cytech:
+            return
+        marge = 10
+        rect = self.logo_cytech.get_rect()
+        pos = (self.screen_w - rect.width - marge, marge)
+        self.ecran.blit(self.logo_cytech, pos)
+
+    # =========================
     # MENU PRINCIPAL
     # =========================
     def afficher_menu(self):
@@ -512,6 +559,8 @@ class Jeu:
         theme_txt = "Mode clair" if self.mode_sombre else "Mode sombre"
         self._dessiner_bouton(btn_theme, theme_txt, (127, 140, 141), (255, 255, 255), rayon=10)
         self._dessiner_bouton(btn_quitter, "Quitter", ROUGE_ALERT, (255, 255, 255), rayon=10)
+        # Logo CyTech en haut à droite (uniquement sur le menu)
+        self._afficher_logo_cytech()
 
         return btn_1v1, btn_facile, btn_moyen, btn_dur, btn_regles, btn_credits, btn_theme, btn_quitter
 
@@ -713,6 +762,8 @@ class Jeu:
             btn_g = pygame.Rect(cadre_rect.x - 75, y + 25, 60, 60)
             btn_d = pygame.Rect(cadre_rect.right + 15, y + 25, 60, 60)
             arrow_rects.append((btn_g, btn_d))
+        # Logo CyTech en haut à droite (uniquement sur la page de paramétrage)
+        self._afficher_logo_cytech()
 
         return btn_demarrer, btn_retour_menu, btn_moins, btn_plus, btn_grilles, arrow_rects
 
